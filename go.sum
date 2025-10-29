@@ -1,0 +1,4 @@
+github.com/c4milo/gotoolkit v0.0.0-20190525173301-67483a18c17a h1:+uvtaGSLJh0YpLLHCQ9F+UVGy4UOS542hsjj8wBjvH0=
+github.com/c4milo/gotoolkit v0.0.0-20190525173301-67483a18c17a/go.mod h1:txokOny9wavBtq2PWuHmj1P+eFwpCsj+gQeNNANChfU=
+github.com/hooklift/iso9660 v1.0.0 h1:GYN0ejrqTl1qtB+g+ics7xxWHp7J2B1zmr25O9EyG3c=
+github.com/hooklift/iso9660 v1.0.0/go.mod h1:sOC47ru8lB0DlU0EZ7BJ0KCP5rDqOvx0c/5K5ADm8H0=
