@@ -9,12 +9,17 @@ import (
 )
 
 var (
+	dir            string
 	dirLimit       int
 	img            string
 	exportLocation string
 )
 
 func init() {
+	processDirectoryCmd.Flags().StringVarP(&dir, "directory", "d", "", "Path to the directory containing ISO images")
+	processDirectoryCmd.Flags().IntVarP(&dirLimit, "limit", "l", 10, "Maximum number of directories to sample from per image")
+	processDirectoryCmd.Flags().StringVarP(&exportLocation, "out", "o", "exports", "Location to export sampled files")
+	rootCmd.AddCommand(processDirectoryCmd)
 	sampleImageCmd.Flags().StringVarP(&img, "image", "i", "", "Path to the ISO image")
 	sampleImageCmd.Flags().IntVarP(&dirLimit, "limit", "l", 10, "Maximum number of directories to sample from")
 	sampleImageCmd.Flags().StringVarP(&exportLocation, "out", "o", "exports", "Location to export sampled files")
@@ -35,6 +40,18 @@ var sampleImageCmd = &cobra.Command{
 		// Implementation of the sampling logic goes here
 		if err := lib.ProcessImage(img, dirLimit, exportLocation); err != nil {
 			fmt.Println("Error processing image:", err)
+		}
+	},
+}
+
+var processDirectoryCmd = &cobra.Command{
+	Use:   "process-directory",
+	Short: "Process a directory",
+	Long:  `Process a directory of images by sampling files based on specified criteria.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		// Implementation of the directory processing logic goes here
+		if err := lib.ProcessDirectory(dir, dirLimit, exportLocation); err != nil {
+			fmt.Println("Error processing directory:", err)
 		}
 	},
 }

@@ -10,17 +10,10 @@ import (
 	"github.com/hooklift/iso9660"
 )
 
-var (
-	dirLimit       int
-	imgDirs        = map[string][]string{}
-	img            string
-	exportLocation string
-)
-
-func ProcessImage(imagePath string, directoryLimit int, exportLoc string) error {
+func ProcessImage(imagePath string, directoryLimit int, exportLocation string) error {
 	img = imagePath
 	dirLimit = directoryLimit
-	exportLocation = exportLoc
+	exportLoc = exportLocation
 
 	if err := setup(); err != nil {
 		return err
@@ -45,10 +38,13 @@ func setup() error {
 	imageName := filepath.Base(img)
 	ext := filepath.Ext(imageName)
 	imageName = imageName[0 : len(imageName)-len(ext)]
-	exportLocation = filepath.Join(exportLocation, imageName)
-	if err := os.MkdirAll(exportLocation, os.ModePerm); err != nil {
+	exportLoc = filepath.Join(exportLoc, imageName)
+	fmt.Println("Creating export directory at:", exportLoc)
+	if err := os.MkdirAll(exportLoc, os.ModePerm); err != nil {
 		return err
 	}
+
+	imgDirs = map[string][]string{}
 	return nil
 }
 
@@ -76,6 +72,10 @@ func readImage(imagePath string) error {
 		if f.IsDir() {
 			imgDirs[f.Name()] = []string{}
 		} else {
+			ext := filepath.Ext(f.Name())
+			if ext == ".db" || ext == ".df" || ext == ".cr2" {
+				continue
+			}
 			path, name := filepath.Split(f.Name())
 			imgDirs[path] = append(imgDirs[path], name)
 		}
@@ -135,14 +135,14 @@ func exportDirectories(imagePath string) error {
 		}
 
 		if f.IsDir() {
-			destDir := filepath.Join(exportLocation, filepath.Clean(f.Name()))
+			destDir := filepath.Join(exportLoc, filepath.Clean(f.Name()))
 			if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
 				return err
 			}
 		} else {
 			if isIncluded(f.Name()) {
 				dir, filename := filepath.Split(f.Name())
-				df := filepath.Join(exportLocation, filepath.Clean(dir), filename)
+				df := filepath.Join(exportLoc, filepath.Clean(dir), filename)
 				fReader := f.Sys().(io.Reader)
 				ff, err := os.OpenFile(df, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, f.Mode())
 				if err != nil {
