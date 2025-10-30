@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	lib "github.com/nyu-acm/iso_sampler/pkg"
+	"github.com/nyu-acm/iso-sampler/pkg"
 	"github.com/spf13/cobra"
 )
 
@@ -37,8 +37,7 @@ var sampleImageCmd = &cobra.Command{
 	Short: "Sample files from an ISO image",
 	Long:  `Sample files from an ISO image based on specified criteria such as directory limit and export location.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Implementation of the sampling logic goes here
-		if err := lib.ProcessImage(img, dirLimit, exportLocation); err != nil {
+		if err := pkg.ProcessImage(img, dirLimit, exportLocation); err != nil {
 			fmt.Println("Error processing image:", err)
 		}
 	},
@@ -49,8 +48,7 @@ var processDirectoryCmd = &cobra.Command{
 	Short: "Process a directory",
 	Long:  `Process a directory of images by sampling files based on specified criteria.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Implementation of the directory processing logic goes here
-		if err := lib.ProcessDirectory(dir, dirLimit, exportLocation); err != nil {
+		if err := pkg.ProcessDirectory(dir, dirLimit, exportLocation); err != nil {
 			fmt.Println("Error processing directory:", err)
 		}
 	},
