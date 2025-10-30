@@ -1,4 +1,4 @@
-image-sampler
+iso-sampler
 =
 
 <pre>
