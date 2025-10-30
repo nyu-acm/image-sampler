@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nyu-acm/iso-sampler/pkg"
+	pkg "github.com/nyu-acm/iso_sampler/pkg"
 	"github.com/spf13/cobra"
 )
 
