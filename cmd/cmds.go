@@ -13,15 +13,19 @@ var (
 	dirLimit       int
 	img            string
 	exportLocation string
+	percentage     int
 )
 
 func init() {
 	processDirectoryCmd.Flags().StringVarP(&dir, "directory", "d", "", "Path to the directory containing ISO images")
-	processDirectoryCmd.Flags().IntVarP(&dirLimit, "limit", "l", 10, "Maximum number of directories to sample from per image")
+	processDirectoryCmd.Flags().IntVarP(&dirLimit, "limit", "l", 50, "Maximum number of directories to sample from per image")
+	processDirectoryCmd.Flags().IntVarP(&percentage, "percentage", "p", 10, "Percentage of files to sample from each directory")
 	processDirectoryCmd.Flags().StringVarP(&exportLocation, "out", "o", "exports", "Location to export sampled files")
 	rootCmd.AddCommand(processDirectoryCmd)
+
+	sampleImageCmd.Flags().IntVarP(&percentage, "percentage", "p", 10, "Percentage of files to sample from each directory")
 	sampleImageCmd.Flags().StringVarP(&img, "image", "i", "", "Path to the ISO image")
-	sampleImageCmd.Flags().IntVarP(&dirLimit, "limit", "l", 10, "Maximum number of directories to sample from")
+	sampleImageCmd.Flags().IntVarP(&dirLimit, "limit", "l", 50, "Maximum number of directories to sample from")
 	sampleImageCmd.Flags().StringVarP(&exportLocation, "out", "o", "exports", "Location to export sampled files")
 	rootCmd.AddCommand(sampleImageCmd)
 }
@@ -37,7 +41,7 @@ var sampleImageCmd = &cobra.Command{
 	Short: "Sample files from an ISO image",
 	Long:  `Sample files from an ISO image based on specified criteria such as directory limit and export location.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := pkg.ProcessImage(img, dirLimit, exportLocation); err != nil {
+		if err := pkg.ProcessImage(img, dirLimit, percentage, exportLocation); err != nil {
 			fmt.Println("Error processing image:", err)
 		}
 	},
@@ -48,7 +52,7 @@ var processDirectoryCmd = &cobra.Command{
 	Short: "Process a directory",
 	Long:  `Process a directory of images by sampling files based on specified criteria.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := pkg.ProcessDirectory(dir, dirLimit, exportLocation); err != nil {
+		if err := pkg.ProcessDirectory(dir, dirLimit, percentage, exportLocation); err != nil {
 			fmt.Println("Error processing directory:", err)
 		}
 	},

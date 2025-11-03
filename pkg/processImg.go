@@ -3,6 +3,7 @@ package lib
 import (
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -10,9 +11,10 @@ import (
 	"github.com/hooklift/iso9660"
 )
 
-func ProcessImage(imagePath string, directoryLimit int, exportLocation string) error {
+func ProcessImage(imagePath string, directoryLimit int, percent int, exportLocation string) error {
 	img = imagePath
 	dirLimit = directoryLimit
+	percentage = percent
 	exportLoc = exportLocation
 
 	if err := setup(); err != nil {
@@ -39,7 +41,7 @@ func setup() error {
 	ext := filepath.Ext(imageName)
 	imageName = imageName[0 : len(imageName)-len(ext)]
 	exportLoc = filepath.Join(exportLoc, imageName)
-	fmt.Println("Creating export directory at:", exportLoc)
+	log.Println("Creating export directory at:", exportLoc)
 	if err := os.MkdirAll(exportLoc, os.ModePerm); err != nil {
 		return err
 	}
@@ -101,10 +103,16 @@ func analyzeDirectories() error {
 }
 
 func sampleDirectory(dir string) error {
+
 	files := imgDirs[dir]
+	numFiles := len(files)
+	sampleSize := (numFiles * percentage) / 100
+
+	log.Printf("Sampling %d out of %d files from directory: %s\n", sampleSize, numFiles, dir)
+
 	selectedFiles := []string{}
-	for i := dirLimit; i > 0; i-- {
-		j := rand.Intn(len(files)-0) + 0
+	for i := sampleSize; i > 0; i-- {
+		j := rand.Intn(len(files))
 		selectedFiles = append(selectedFiles, files[j])
 		files = append(files[:j], files[j+1:]...)
 	}

@@ -2,10 +2,10 @@ iso-sampler
 =
 
 <pre>
-iso_sampler is a command-line tool that allows users to sample files from ISO images based on specified criteria.
+iso-sampler is a command-line tool that allows users to sample files from ISO images based on specified criteria.
 
 Usage:
-  iso_sampler [command]
+  iso-sampler [command]
 
 Available Commands:
   completion        Generate the autocompletion script for the specified shell
@@ -23,7 +23,7 @@ process-directory
 Process a directory of images by sampling files based on specified criteria.
 
 Usage:
-  iso_sampler process-directory [flags]
+  iso-sampler process-directory [flags]
 
 Flags:
   -d, --directory string   Path to the directory containing ISO images
@@ -38,7 +38,7 @@ Flags:
   Sample files from an ISO image based on specified criteria such as directory limit and export location.
 
 Usage:
-  iso_sampler sample-image [flags]
+  iso-sampler sample-image [flags]
 
 Flags:
   -h, --help           help for sample-image
