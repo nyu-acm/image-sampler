@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -11,11 +12,31 @@ import (
 	"github.com/hooklift/iso9660"
 )
 
-func ProcessImage(imagePath string, directoryLimit int, percent int, exportLocation string) error {
+var (
+	imageExtensions      = []string{".jpg", ".jpeg", ".png", ".gif", ".tiff", ".tif"}
+	numFilesSelected int = 0
+	numFilesRemoved  int = 0
+	imageFilename    string
+	removedWriter    *bufio.Writer
+	removedFilesOut  *os.File
+)
+
+func isImageFile(ext string) bool {
+	for _, imageExt := range imageExtensions {
+		if ext == imageExt {
+			return true
+		}
+	}
+	return false
+}
+
+func ProcessImage(imagePath string, directoryLimit int, percent int, exportLocation string, removedLocation string) error {
 	img = imagePath
+	imageFilename = filepath.Base(imagePath)
 	dirLimit = directoryLimit
 	percentage = percent
 	exportLoc = exportLocation
+	removedLoc = removedLocation
 
 	if err := setup(); err != nil {
 		return err
@@ -33,6 +54,8 @@ func ProcessImage(imagePath string, directoryLimit int, percent int, exportLocat
 		return err
 	}
 
+	log.Printf("[info] processing complete on %s: %d files selected, %d files removed.\n", img, numFilesSelected, numFilesRemoved)
+
 	return nil
 }
 
@@ -41,8 +64,14 @@ func setup() error {
 	ext := filepath.Ext(imageName)
 	imageName = imageName[0 : len(imageName)-len(ext)]
 	exportLoc = filepath.Join(exportLoc, imageName)
-	log.Println("Creating export directory at:", exportLoc)
+	removedLoc = filepath.Join(removedLoc, imageName)
+	log.Println("[info] creating export directory at:", exportLoc)
 	if err := os.MkdirAll(exportLoc, os.ModePerm); err != nil {
+		return err
+	}
+
+	log.Println("[info] creating removed directory at:", removedLoc)
+	if err := os.MkdirAll(removedLoc, os.ModePerm); err != nil {
 		return err
 	}
 
@@ -91,8 +120,17 @@ func analyzeDirectories() error {
 	for dir, files := range imgDirs {
 		if len(files) > 0 {
 			if len(files) >= dirLimit {
-				if err := sampleDirectory(dir); err != nil {
+
+				imgCount, err := numImageFiles(files)
+				if err != nil {
 					return err
+				}
+
+				if imgCount >= dirLimit {
+
+					if err := sampleDirectory(dir); err != nil {
+						return err
+					}
 				}
 			}
 		} else {
@@ -102,19 +140,47 @@ func analyzeDirectories() error {
 	return nil
 }
 
+func numImageFiles(files []string) (int, error) {
+	imageFileCount := 0
+	for _, file := range files {
+		ext := filepath.Ext(file)
+		if isImageFile(ext) {
+			imageFileCount++
+		}
+	}
+	return imageFileCount, nil
+}
+
+func getImageFiles(files []string) ([]string, []string) {
+	imageFiles := []string{}
+	nonImageFiles := []string{}
+	for _, file := range files {
+		ext := filepath.Ext(file)
+		if isImageFile(ext) {
+			imageFiles = append(imageFiles, file)
+		} else {
+			nonImageFiles = append(nonImageFiles, file)
+		}
+	}
+	return imageFiles, nonImageFiles
+}
+
 func sampleDirectory(dir string) error {
 
 	files := imgDirs[dir]
-	numFiles := len(files)
-	sampleSize := (numFiles * percentage) / 100
+	imageFiles, nonImageFiles := getImageFiles(files)
+	numImageFiles := len(imageFiles)
+	sampleSize := (numImageFiles * percentage) / 100
 
-	log.Printf("Sampling %d out of %d files from directory: %s\n", sampleSize, numFiles, dir)
+	log.Printf("[info] sampling %d out of %d image files from directory: %s\n", sampleSize, numImageFiles, filepath.Join(imageFilename, dir))
 
 	selectedFiles := []string{}
+	selectedFiles = append(selectedFiles, nonImageFiles...)
+
 	for i := sampleSize; i > 0; i-- {
-		j := rand.Intn(len(files))
-		selectedFiles = append(selectedFiles, files[j])
-		files = append(files[:j], files[j+1:]...)
+		j := rand.Intn(len(imageFiles))
+		selectedFiles = append(selectedFiles, imageFiles[j])
+		imageFiles = append(imageFiles[:j], imageFiles[j+1:]...)
 	}
 
 	imgDirs[dir] = selectedFiles
@@ -143,11 +209,17 @@ func exportDirectories(imagePath string) error {
 		}
 
 		if f.IsDir() {
-			destDir := filepath.Join(exportLoc, filepath.Clean(f.Name()))
-			if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
+			exportDir := filepath.Join(exportLoc, filepath.Clean(f.Name()))
+			if err := os.MkdirAll(exportDir, os.ModePerm); err != nil {
+				return err
+			}
+
+			removedDir := filepath.Join(removedLoc, filepath.Clean(f.Name()))
+			if err := os.MkdirAll(removedDir, os.ModePerm); err != nil {
 				return err
 			}
 		} else {
+
 			if isIncluded(f.Name()) {
 				dir, filename := filepath.Split(f.Name())
 				df := filepath.Join(exportLoc, filepath.Clean(dir), filename)
@@ -160,6 +232,23 @@ func exportDirectories(imagePath string) error {
 				if _, err := io.Copy(ff, fReader); err != nil {
 					return err
 				}
+				numFilesSelected++
+			} else {
+				if exportRemoved {
+					dir, filename := filepath.Split(f.Name())
+					df := filepath.Join(removedLoc, filepath.Clean(dir), filename)
+					fReader := f.Sys().(io.Reader)
+					ff, err := os.OpenFile(df, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, f.Mode())
+					if err != nil {
+						return err
+					}
+					defer ff.Close()
+					if _, err := io.Copy(ff, fReader); err != nil {
+						return err
+					}
+				}
+				numFilesRemoved++
+				removedWriter.WriteString(f.Name() + "\n")
 			}
 		}
 

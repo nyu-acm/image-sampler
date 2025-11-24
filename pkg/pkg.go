@@ -6,4 +6,5 @@ var (
 	img        string
 	exportLoc  string
 	percentage int
+	removedLoc string
 )

@@ -1,30 +1,38 @@
 package lib
 
 import (
-	"fmt"
+	"bufio"
 	"log"
 	"os"
 	"path/filepath"
 )
 
-func ProcessDirectory(directoryPath string, directoryLimit int, percent int, exportLocation string) error {
+var exportRemoved bool
 
-	log.Println("directoryPath:", directoryPath)
-	log.Println("directoryLimit:", directoryLimit)
-	log.Println("percent:", percent)
-	log.Println("exportLocation:", exportLocation)
+func ProcessDirectory(directoryPath string, directoryLimit int, percent int, exportLocation string, removedLocation string, xportRemoved bool) error {
 
+	log.Printf("[info] directoryPath: %s, directoryLimit: %d, percent: %d, exportLocation: %s, removedLocation: %s\n", directoryPath, directoryLimit, percent, exportLocation, removedLocation)
 	images, err := os.ReadDir(directoryPath)
 	if err != nil {
 		return err
 	}
 
+	exportRemoved = xportRemoved
+
+	removedFilesOut, err = os.Create("removedFiles.txt")
+	if err != nil {
+		return err
+	}
+	defer removedFilesOut.Close()
+	removedWriter = bufio.NewWriter(removedFilesOut)
+	defer removedWriter.Flush()
+
 	for _, img := range images {
 		if !img.IsDir() && filepath.Ext(img.Name()) == ".iso" {
 			inputPath := filepath.Join(directoryPath, img.Name())
-			fmt.Println("Processing image:", inputPath)
+			log.Println("[info] processing image:", inputPath)
 
-			if err := ProcessImage(inputPath, directoryLimit, percent, exportLocation); err != nil {
+			if err := ProcessImage(inputPath, directoryLimit, percent, exportLocation, removedLocation); err != nil {
 				return err
 			}
 
