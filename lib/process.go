@@ -1,24 +1,26 @@
 package lib
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hooklift/iso9660"
+	"github.com/nyudlts/bytemath"
 )
 
 var (
-	imageExtensions      = []string{".jpg", ".jpeg", ".png", ".gif", ".tiff", ".tif"}
-	numFilesSelected int = 0
-	numFilesRemoved  int = 0
+	imageExtensions  = []string{".jpg", ".jpeg", ".png", ".gif", ".tiff", ".tif", ".cr2", ".cr3", ".nef", ".arw", ".dng", ".orf", ".pef", ".rw2", ".3fr"}
+	imgDirs          map[string][]string
 	imageFilename    string
-	removedWriter    *bufio.Writer
-	removedFilesOut  *os.File
+	numFilesSelected int
+	numFilesRemoved  int
+	exportLoc        string
+	removedLoc       string
 )
 
 func isImageFile(ext string) bool {
@@ -30,19 +32,16 @@ func isImageFile(ext string) bool {
 	return false
 }
 
-func ProcessImage(imagePath string, directoryLimit int, percent int, exportLocation string, removedLocation string) error {
-	img = imagePath
+func ProcessImage(imagePath string, exportLocation string, removedLocation string) error {
 	imageFilename = filepath.Base(imagePath)
-	dirLimit = directoryLimit
-	percentage = percent
 	exportLoc = exportLocation
 	removedLoc = removedLocation
 
-	if err := setup(); err != nil {
+	if err := setup(imagePath); err != nil {
 		return err
 	}
 
-	if err := readImage(img); err != nil {
+	if err := readImage(imagePath); err != nil {
 		return err
 	}
 
@@ -50,17 +49,17 @@ func ProcessImage(imagePath string, directoryLimit int, percent int, exportLocat
 		return err
 	}
 
-	if err := exportDirectories(img); err != nil {
+	if err := exportDirectories(imagePath); err != nil {
 		return err
 	}
 
-	log.Printf("[info] processing complete on %s: %d files selected, %d files removed.\n", img, numFilesSelected, numFilesRemoved)
+	log.Printf("[info] processing complete on %s: %d files selected, %d files removed.\n", filepath.Base(imagePath), numFilesSelected, numFilesRemoved)
 
 	return nil
 }
 
-func setup() error {
-	imageName := filepath.Base(img)
+func setup(imagePath string) error {
+	imageName := filepath.Base(imagePath)
 	ext := filepath.Ext(imageName)
 	imageName = imageName[0 : len(imageName)-len(ext)]
 	exportLoc = filepath.Join(exportLoc, imageName)
@@ -70,9 +69,11 @@ func setup() error {
 		return err
 	}
 
-	log.Println("[info] creating removed directory at:", removedLoc)
-	if err := os.MkdirAll(removedLoc, os.ModePerm); err != nil {
-		return err
+	if exportRemoved {
+		log.Println("[info] creating removed directory at:", removedLoc)
+		if err := os.MkdirAll(removedLoc, os.ModePerm); err != nil {
+			return err
+		}
 	}
 
 	imgDirs = map[string][]string{}
@@ -104,7 +105,7 @@ func readImage(imagePath string) error {
 			imgDirs[f.Name()] = []string{}
 		} else {
 			ext := filepath.Ext(f.Name())
-			if ext == ".db" || ext == ".df" || ext == ".cr2" {
+			if ext == ".db" || ext == ".df" || f.Name() == ".dss" || f.Name() == ".DS_Store" {
 				continue
 			}
 			path, name := filepath.Split(f.Name())
@@ -214,9 +215,11 @@ func exportDirectories(imagePath string) error {
 				return err
 			}
 
-			removedDir := filepath.Join(removedLoc, filepath.Clean(f.Name()))
-			if err := os.MkdirAll(removedDir, os.ModePerm); err != nil {
-				return err
+			if exportRemoved {
+				removedDir := filepath.Join(removedLoc, filepath.Clean(f.Name()))
+				if err := os.MkdirAll(removedDir, os.ModePerm); err != nil {
+					return err
+				}
 			}
 		} else {
 
@@ -233,6 +236,14 @@ func exportDirectories(imagePath string) error {
 					return err
 				}
 				numFilesSelected++
+				totalNumFilesRetained++
+				normalizedPath, fName := filepath.Split(strings.ReplaceAll(f.Name(), "\\", "/"))
+				ext := filepath.Ext(fName)
+				size := fmt.Sprintf("%d", f.Size())
+				humanSize := bytemath.ConvertBytesToHumanReadable(f.Size())
+				retainedWriter.Write([]string{imageFilename, normalizedPath, fName, ext, size, humanSize})
+				totalSizeRetained += f.Size()
+
 			} else {
 				if exportRemoved {
 					dir, filename := filepath.Split(f.Name())
@@ -248,7 +259,13 @@ func exportDirectories(imagePath string) error {
 					}
 				}
 				numFilesRemoved++
-				removedWriter.WriteString(f.Name() + "\n")
+				normalizedPath, fName := filepath.Split(strings.ReplaceAll(f.Name(), "\\", "/"))
+				ext := filepath.Ext(fName)
+				size := fmt.Sprintf("%d", f.Size())
+				humanSize := bytemath.ConvertBytesToHumanReadable(f.Size())
+				removedWriter.Write([]string{imageFilename, normalizedPath, fName, ext, size, humanSize})
+				totalSizeRemoved += f.Size()
+				totalNumFilesRemoved++
 			}
 		}
 
